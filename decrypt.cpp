@@ -114,9 +114,9 @@ void InitialRound(unsigned char * state, unsigned char * key) {
 
 // Final decryption round: inverse of the initial encryption round
 void FinalRound(unsigned char * state, unsigned char * key) {
-	SubRoundKey(state, key);
 	ShiftRows(state);
 	SubBytes(state);
+	SubRoundKey(state, key);
 }
 
 /* The AES decryption function
