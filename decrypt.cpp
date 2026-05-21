@@ -112,6 +112,13 @@ void InitialRound(unsigned char * state, unsigned char * key) {
 	SubBytes(state);
 }
 
+// Final decryption round: inverse of the initial encryption round
+void FinalRound(unsigned char * state, unsigned char * key) {
+	SubRoundKey(state, key);
+	ShiftRows(state);
+	SubBytes(state);
+}
+
 /* The AES decryption function
  * Organizes all the decryption steps into one function
  */
@@ -125,13 +132,11 @@ void AESDecrypt(unsigned char * encryptedMessage, unsigned char * expandedKey, u
 
 	InitialRound(state, expandedKey+160);
 
-	int numberOfRounds = 9;
-
 	for (int i = 8; i >= 0; i--) {
 		Round(state, expandedKey + (16 * (i + 1)));
 	}
 
-	SubRoundKey(state, expandedKey); // Final round
+	FinalRound(state, expandedKey);
 
 	// Copy decrypted state to buffer
 	for (int i = 0; i < 16; i++) {
