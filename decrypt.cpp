@@ -105,11 +105,9 @@ void Round(unsigned char * state, unsigned char * key) {
 	InverseMixColumns(state);
 }
 
-// Same as Round() but no InverseMixColumns
+// Initial decryption round: only add the last round key
 void InitialRound(unsigned char * state, unsigned char * key) {
 	SubRoundKey(state, key);
-	ShiftRows(state);
-	SubBytes(state);
 }
 
 // Final decryption round: inverse of the initial encryption round
