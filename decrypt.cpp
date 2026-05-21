@@ -6,6 +6,7 @@
 #include <cstring>
 #include <fstream>
 #include <sstream>
+#include <vector>
 #include "structures.h"
 
 using namespace std;
@@ -98,10 +99,10 @@ void SubBytes(unsigned char * state) {
  * Not surprisingly, the steps are the encryption steps but reversed
  */
 void Round(unsigned char * state, unsigned char * key) {
-	SubRoundKey(state, key);
-	InverseMixColumns(state);
 	ShiftRows(state);
 	SubBytes(state);
+	SubRoundKey(state, key);
+	InverseMixColumns(state);
 }
 
 // Same as Round() but no InverseMixColumns
@@ -144,79 +145,84 @@ int main() {
 	cout << " 128-bit AES Decryption Tool " << endl;
 	cout << "=============================" << endl;
 
-	// Read in the message from message.aes
-	string msgstr;
-	ifstream infile;
-	infile.open("message.aes", ios::in | ios::binary);
+	// Read the encrypted data from message.aes
+	vector<unsigned char> encryptedData;
+	ifstream infile("message.aes", ios::in | ios::binary);
 
-	if (infile.is_open())
-	{
-		getline(infile, msgstr); // The first line of file is the message
-		cout << "Read in encrypted message from message.aes" << endl;
-		infile.close();
+	if (!infile.is_open()) {
+		cerr << "Unable to open message.aes" << endl;
+		return 1;
 	}
 
-	else cout << "Unable to open file";
-
-	char * msg = new char[msgstr.size()+1];
-
-	strcpy(msg, msgstr.c_str());
-
-	int n = strlen((const char*)msg);
-
-	unsigned char * encryptedMessage = new unsigned char[n];
-	for (int i = 0; i < n; i++) {
-		encryptedMessage[i] = (unsigned char)msg[i];
+	infile.seekg(0, ios::end);
+	auto size = infile.tellg();
+	if (size < 0) {
+		cerr << "Unable to determine message.aes size" << endl;
+		return 1;
 	}
+	infile.seekg(0, ios::beg);
 
-	// Free memory
-	delete[] msg;
+	encryptedData.resize(static_cast<size_t>(size));
+	if (!infile.read(reinterpret_cast<char *>(encryptedData.data()), encryptedData.size())) {
+		cerr << "Unable to read full ciphertext from message.aes" << endl;
+		return 1;
+	}
+	cout << "Read in encrypted message from message.aes" << endl;
+	infile.close();
+
+	if (encryptedData.empty() || (encryptedData.size() % 16) != 0) {
+		cerr << "Invalid ciphertext length in message.aes" << endl;
+		return 1;
+	}
 
 	// Read in the key
 	string keystr;
-	ifstream keyfile;
-	keyfile.open("keyfile", ios::in | ios::binary);
+	ifstream keyfile("keyfile", ios::in | ios::binary);
 
-	if (keyfile.is_open())
-	{
-		getline(keyfile, keystr); // The first line of file should be the key
-		cout << "Read in the 128-bit key from keyfile" << endl;
-		keyfile.close();
+	if (!keyfile.is_open()) {
+		cerr << "Unable to open keyfile" << endl;
+		return 1;
 	}
 
-	else cout << "Unable to open file";
+	if (!getline(keyfile, keystr)) {
+		cerr << "Unable to read key from keyfile" << endl;
+		return 1;
+	}
+	cout << "Read in the 128-bit key from keyfile" << endl;
+	keyfile.close();
 
 	istringstream hex_chars_stream(keystr);
 	unsigned char key[16];
 	int i = 0;
 	unsigned int c;
-	while (hex_chars_stream >> hex >> c)
-	{
-		key[i] = c;
+	while (i < 16 && hex_chars_stream >> hex >> c) {
+		key[i] = static_cast<unsigned char>(c);
 		i++;
 	}
 
+	if (i != 16) {
+		cerr << "Invalid key format in keyfile" << endl;
+		return 1;
+	}
+
 	unsigned char expandedKey[176];
-
 	KeyExpansion(key, expandedKey);
-	
-	int messageLen = strlen((const char *)encryptedMessage);
 
-	unsigned char * decryptedMessage = new unsigned char[messageLen];
+	size_t messageLen = encryptedData.size();
+	vector<unsigned char> decryptedMessage(messageLen);
 
-	for (int i = 0; i < messageLen; i += 16) {
-		AESDecrypt(encryptedMessage + i, expandedKey, decryptedMessage + i);
+	for (size_t j = 0; j < messageLen; j += 16) {
+		AESDecrypt(encryptedData.data() + j, expandedKey, decryptedMessage.data() + j);
 	}
 
 	cout << "Decrypted message in hex:" << endl;
-	for (int i = 0; i < messageLen; i++) {
-		cout << hex << (int)decryptedMessage[i];
-		cout << " ";
+	for (size_t j = 0; j < messageLen; j++) {
+		cout << hex << static_cast<int>(decryptedMessage[j]) << " ";
 	}
 	cout << endl;
 	cout << "Decrypted message: ";
-	for (int i = 0; i < messageLen; i++) {
-		cout << decryptedMessage[i];
+	for (size_t j = 0; j < messageLen; j++) {
+		cout << static_cast<char>(decryptedMessage[j]);
 	}
 	cout << endl;
 

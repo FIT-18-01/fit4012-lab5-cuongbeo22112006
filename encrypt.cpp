@@ -169,25 +169,37 @@ int main() {
 	unsigned char * encryptedMessage = new unsigned char[paddedMessageLen];
 
 	string str;
-	ifstream infile;
-	infile.open("keyfile", ios::in | ios::binary);
+	ifstream infile("keyfile", ios::in | ios::binary);
 
-	if (infile.is_open())
-	{
-		getline(infile, str); // The first line of file should be the key
-		infile.close();
+	if (!infile.is_open()) {
+		cerr << "Unable to open keyfile" << endl;
+		delete[] paddedMessage;
+		delete[] encryptedMessage;
+		return 1;
 	}
 
-	else cout << "Unable to open file";
+	if (!getline(infile, str)) {
+		cerr << "Unable to read key from keyfile" << endl;
+		delete[] paddedMessage;
+		delete[] encryptedMessage;
+		return 1;
+	}
+	infile.close();
 
 	istringstream hex_chars_stream(str);
 	unsigned char key[16];
 	int i = 0;
 	unsigned int c;
-	while (hex_chars_stream >> hex >> c)
-	{
-		key[i] = c;
+	while (i < 16 && hex_chars_stream >> hex >> c) {
+		key[i] = static_cast<unsigned char>(c);
 		i++;
+	}
+
+	if (i != 16) {
+		cerr << "Invalid key format in keyfile" << endl;
+		delete[] paddedMessage;
+		delete[] encryptedMessage;
+		return 1;
 	}
 
 	unsigned char expandedKey[176];
@@ -206,17 +218,18 @@ int main() {
 
 	cout << endl;
 
-	// Write the encrypted string out to file "message.aes"
-	ofstream outfile;
-	outfile.open("message.aes", ios::out | ios::binary);
-	if (outfile.is_open())
-	{
-		outfile << encryptedMessage;
-		outfile.close();
-		cout << "Wrote encrypted message to file message.aes" << endl;
+	// Write the encrypted bytes to message.aes
+	ofstream outfile("message.aes", ios::out | ios::binary);
+	if (!outfile.is_open()) {
+		cerr << "Unable to open output file message.aes" << endl;
+		delete[] paddedMessage;
+		delete[] encryptedMessage;
+		return 1;
 	}
 
-	else cout << "Unable to open file";
+	outfile.write(reinterpret_cast<char *>(encryptedMessage), paddedMessageLen);
+	outfile.close();
+	cout << "Wrote encrypted message to file message.aes" << endl;
 
 	// Free memory
 	delete[] paddedMessage;

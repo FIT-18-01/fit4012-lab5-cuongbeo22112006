@@ -84,8 +84,8 @@ Cả hai chương trình đều đọc khóa AES-128 từ file `keyfile`. File `
 ## 4. Output / Đầu ra
 
 - `encrypt` in ciphertext theo dạng hex ra màn hình.
-- `encrypt` ghi ciphertext ra file `message.aes`.
-- `decrypt` đọc `message.aes`, in plaintext dạng hex và plaintext dạng ký tự.
+- `encrypt` ghi ciphertext nhị phân ra file `message.aes`.
+- `decrypt` đọc file nhị phân `message.aes`, in plaintext dạng hex và plaintext dạng ký tự.
 
 ## 5. Padding đang dùng
 
